@@ -106,8 +106,10 @@ class Phassets
         if (is_array($filters)) {
             $this->filters = $filters;
 
-            foreach ($filters as $filter) {
-                $this->loadFilter($filter);
+            foreach ($filters as $extensionFilters) {
+                foreach ($extensionFilters as $filter) {
+                    $this->loadFilter($filter);
+                }
             }
         } else {
             $this->loadedLogger->warning('"filters" setting is not an array; no filters loaded...');
@@ -199,7 +201,8 @@ class Phassets
         }
 
         if (isset($this->deployersInstances[$customDeployer]) &&
-            $this->deployersInstances[$customDeployer] instanceof Deployer) {
+            $this->deployersInstances[$customDeployer] instanceof Deployer
+        ) {
             return $this->deployersInstances[$customDeployer]->deploy($asset);
         } elseif ($this->deployersInstances[$this->loadedDeployer] instanceof Deployer) {
             return $this->deployersInstances[$this->loadedDeployer]->deploy($asset);
