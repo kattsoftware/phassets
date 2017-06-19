@@ -46,6 +46,11 @@ class Asset
         return isset($this->pathinfo['extension']) ? $this->pathinfo['extension'] : false;
     }
 
+    public function getFilename()
+    {
+        return isset($this->pathinfo['filename']) ? $this->pathinfo['filename'] : false;
+    }
+
     public function getContents()
     {
         if ($this->isFile) {

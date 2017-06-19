@@ -12,7 +12,7 @@ interface Configurator
      * @param string $name Setting name
      * @param string $index If setting is an array, this can be array's key
      *                      for proper element fetch, otherwise it should be null
-     * @return mixed
+     * @return mixed The setting value; otherwise null
      */
     public function getConfig($name, $index = null);
 }

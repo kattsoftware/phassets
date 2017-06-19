@@ -19,6 +19,10 @@ class FilesystemDeployer implements Deployer
      */
     private $cacheAdapter;
 
+    private $destinationPath;
+
+    private $baseUrl;
+
     /**
      * Deployer constructor.
      *
@@ -42,7 +46,15 @@ class FilesystemDeployer implements Deployer
      */
     public function getDeployedFile(Asset $asset)
     {
-        // TODO: Implement getDeployedFile() method.
+        // Is there any previous deployed version?
+        $outputBasename = $this->computeOutputBasename($asset);
+        $file = $this->destinationPath . DIRECTORY_SEPARATOR . $outputBasename;
+
+        if (is_file($file)) {
+            return $this->baseUrl . '/' . $outputBasename;
+        }
+
+        return false;
     }
 
     /**
@@ -54,7 +66,16 @@ class FilesystemDeployer implements Deployer
      */
     public function deploy(Asset $asset)
     {
-        // TODO: Implement deploy() method.
+        $outputBasename = $this->computeOutputBasename($asset);
+        $fullPath = $this->destinationPath . DIRECTORY_SEPARATOR . $outputBasename;
+
+        $saving = file_put_contents($fullPath, $asset->getContents());
+
+        if($saving === false) {
+            return false;
+        }
+
+        return $this->baseUrl . '/' . $outputBasename;
     }
 
     /**
@@ -67,11 +88,24 @@ class FilesystemDeployer implements Deployer
      */
     public function isSupported()
     {
+        $this->destinationPath = $this->configurator->getConfig('filesystem_deployer', 'destination_path');
+        $this->baseUrl = $this->configurator->getConfig('filesystem_deployer', 'base_url');
 
+        if ($this->destinationPath === null) {
+            return false;
+        }
+
+        if (!is_dir($this->destinationPath) || !is_writable($this->destinationPath)) {
+            return false;
+        }
+
+        return true;
     }
 
-    private function computeOutputFilename(Asset $asset)
+    private function computeOutputBasename(Asset $asset)
     {
+        $ext = $asset->getExtension() ? '.' . $asset->getExtension() : '';
 
+        return $asset->getFilename() . '_' . $asset->getModifiedTimestamp() . $ext;
     }
 }

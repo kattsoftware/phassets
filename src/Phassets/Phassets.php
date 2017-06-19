@@ -198,85 +198,14 @@ class Phassets
             }
         }
 
-        if ($this->deployersInstances[$customDeployer] instanceof Deployer) {
+        if (isset($this->deployersInstances[$customDeployer]) &&
+            $this->deployersInstances[$customDeployer] instanceof Deployer) {
             return $this->deployersInstances[$customDeployer]->deploy($asset);
         } elseif ($this->deployersInstances[$this->loadedDeployer] instanceof Deployer) {
             return $this->deployersInstances[$this->loadedDeployer]->deploy($asset);
         }
 
         return false;
-    }
-
-    private function processAsset($file, $typeOf = 'other', $customFilters = null, $customDeployer = null)
-    {
-        $fullPath = $this->assetsSource . DIRECTORY_SEPARATOR . $file;
-
-        $filemtime = null;
-        $content = null;
-
-        $isFile = is_file($fullPath);
-
-        if ($isFile) {
-            $filemtime = filemtime($fullPath);
-        }
-
-        // No deployers available?
-        $noDeployersCondition = ($this->loadedDeployer === null && $customDeployer === null)
-            || ($this->loadedDeployer !== null && $customDeployer === false);
-
-        if (!$noDeployersCondition) {
-
-            if (is_string($customDeployer) && $this->loadDeploayer($customDeployer)) {
-                $deployer = $this->deployersInstances[$customDeployer];
-            } elseif (is_string($this->loadedDeployer)) {
-                $deployer = $this->deployersInstances[$this->loadedDeployer];
-            } else {
-                return false;
-            }
-
-            $existingSolution = $deployer->getDeployedFile($file, $filemtime);
-
-            if ($existingSolution !== false) {
-                return $existingSolution;
-            }
-        }
-
-        if ($isFile) {
-            $content = file_get_contents($fullPath);
-        }
-
-        $filters = isset($this->filters[$typeOf]) ? $this->filters[$typeOf] : [];
-
-        if (is_array($customFilters)) {
-            foreach ($customFilters as $customFilterIndex => $customFilterValue) {
-                if (!$this->loadFilter($customFilterValue)) {
-                    unset($customFilters[$customFilterIndex]);
-                }
-            }
-
-            $filters = $customFilters;
-        }
-
-        foreach ($filters as $filter) {
-            if (is_object($filter)) { // TODO
-                $content = $this->filtersInstances[$filter]->filter($content);
-            }
-        }
-
-        if (!$noDeployersCondition) {
-
-            if (is_string($customDeployer) && $this->loadDeploayer($customDeployer)) {
-                $deployer = $this->deployersInstances[$customDeployer];
-            } elseif (is_string($this->loadedDeployer)) {
-                $deployer = $this->deployersInstances[$this->loadedDeployer];
-            } else {
-                return false;
-            }
-
-            return $deployer->deploy($file, $content, $filemtime);
-        }
-
-        return $content;
     }
 
     /**
@@ -348,6 +277,12 @@ class Phassets
 
         if ($deployer === false) {
             $this->loadedLogger->warning('Could not load ' . $class . ' deployer.');
+
+            return false;
+        }
+
+        if (!$deployer->isSupported()) {
+            $this->loadedLogger->warning($class . ' deployer is not supported.');
 
             return false;
         }

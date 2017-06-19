@@ -54,7 +54,13 @@ class Factory
         return new Asset($file);
     }
 
-    public function buildDeployer($class, Configurator $configurator, CacheAdapter $cacheAdapter = null)
+    /**
+     * @param       string $class
+     * @param Configurator $configurator
+     * @param CacheAdapter $cacheAdapter
+     * @return Deployer|bool
+     */
+    public function buildDeployer($class, Configurator $configurator, CacheAdapter $cacheAdapter)
     {
         if (!class_exists($class) || !is_subclass_of($class, Deployer::class)) {
             $class = "\\Phassets\\Deployers\\$class";
