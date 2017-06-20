@@ -95,7 +95,6 @@ class AmazonS3Deployer implements Deployer
             \S3::ACL_PUBLIC_READ
         );
 
-
         // TODO check result?
 
         return $awsS3Url;
@@ -123,7 +122,7 @@ class AmazonS3Deployer implements Deployer
             return false;
         }
 
-        var_dump($this->awsAccessKey, $this->awsSecretKey, $this->bucket);
+        \S3::setAuth($this->awsAccessKey, $this->awsSecretKey);
 
         return true;
     }
