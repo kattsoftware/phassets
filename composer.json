@@ -1,7 +1,7 @@
 {
   "name": "kattsoftware/phassets",
   "description": "PHP library for assets management (processing, deployment and serving).",
-  "version": "0.0.1-beta",
+  "version": "0.0.2-beta",
   "license": "MIT",
   "type": "library",
   "homepage": "https://github.com/kattsoftware/phassets",
