@@ -17,9 +17,11 @@ interface CacheAdapter
      *
      * @param string $key
      * @param mixed $value
+     * @param int $ttl Number of seconds before the value expires; not required
+     *                 since this can be retrieved from cache > ttl config.
      * @return mixed|bool The saved value or false if saving cannot be performed
      */
-    public function save($key, $value);
+    public function save($key, $value, $ttl = null);
 
     /**
      * Return the cached value for a given key or false on failure.

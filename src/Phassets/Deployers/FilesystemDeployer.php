@@ -9,6 +9,8 @@ use Phassets\Interfaces\Deployer;
 
 class FilesystemDeployer implements Deployer
 {
+    const CACHE_TTL = 3600;
+
     /**
      * @var Configurator Loaded configurator
      */
@@ -54,6 +56,13 @@ class FilesystemDeployer implements Deployer
     {
         // Is there any previous deployed version?
         $outputBasename = $this->computeOutputBasename($asset);
+
+        $cachedUrl = $this->cacheAdapter->get($this->generateCacheKey($outputBasename));
+
+        if($cachedUrl !== false) {
+            return $cachedUrl;
+        }
+
         $file = $this->destinationPath . DIRECTORY_SEPARATOR . $outputBasename;
 
         if (is_file($file)) {
@@ -82,7 +91,11 @@ class FilesystemDeployer implements Deployer
             return false;
         }
 
-        return $this->baseUrl . '/' . $outputBasename;
+        $absoluteUrl = $this->baseUrl . '/' . $outputBasename;
+
+        $this->cacheAdapter->save($this->generateCacheKey($outputBasename), $absoluteUrl, self::CACHE_TTL);
+
+        return $absoluteUrl;
     }
 
     /**
@@ -121,5 +134,16 @@ class FilesystemDeployer implements Deployer
         $ext = $asset->getExtension() ? '.' . $asset->getExtension() : '';
 
         return $asset->getFilename() . '_' . $asset->getModifiedTimestamp() . $ext;
+    }
+
+    /**
+     * CacheAdapter specific cache key.
+     *
+     * @param string $computedFileName
+     * @return string
+     */
+    private function generateCacheKey($computedFileName)
+    {
+        return 'ph_fsystem_' . $computedFileName;
     }
 }

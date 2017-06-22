@@ -33,7 +33,7 @@ class Phassets
     private $loadedLogger;
 
     /**
-     * @var string The assets_source config value
+     * @var array The assets_source config value (array of paths)
      */
     private $assetsSource;
 
@@ -109,6 +109,9 @@ class Phassets
             $this->loadedLogger->warning('Could not load the "assets_source" setting.');
         }
 
+        // "assets_source" can be an array of paths.
+        $this->assetsSource = (array)$this->assetsSource;
+
         // Loading the filters
         $filters = $this->loadedConfigurator->getConfig('filters');
 
@@ -171,8 +174,10 @@ class Phassets
      */
     public function createAsset($file)
     {
-        if (is_file($this->assetsSource . DIRECTORY_SEPARATOR . $file)) {
-            return $this->objectsFactory->buildAsset($this->assetsSource . DIRECTORY_SEPARATOR . $file);
+        foreach ($this->assetsSource as $source) {
+            if (is_file($source . DIRECTORY_SEPARATOR . $file)) {
+                return $this->objectsFactory->buildAsset($source . DIRECTORY_SEPARATOR . $file);
+            }
         }
 
         return $this->objectsFactory->buildAsset($file);
