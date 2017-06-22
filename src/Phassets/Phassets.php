@@ -162,6 +162,13 @@ class Phassets
         }
     }
 
+    /**
+     * Given a full-path of a file/arbitrary string, creates an instance
+     * of Asset.
+     *
+     * @param string $file
+     * @return Asset Generated instance for $file
+     */
     public function createAsset($file)
     {
         if (is_file($this->assetsSource . DIRECTORY_SEPARATOR . $file)) {
@@ -171,6 +178,15 @@ class Phassets
         return $this->objectsFactory->buildAsset($file);
     }
 
+    /**
+     * Processes and deploys an Asset instance and returns an absolute URL
+     * to its new version; will return false on failure.
+     *
+     * @param Asset $asset Asset to be processed & deployed
+     * @param null|array $customFilters Overrides "filter" setting
+     * @param null|string $customDeployer Overrides the loaded deployer
+     * @return bool|string Absolute URL to deployed Asset, false on failure
+     */
     public function work(Asset $asset, $customFilters = null, $customDeployer = null)
     {
         // See if file is already deployed.

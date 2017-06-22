@@ -1,18 +1,18 @@
 {
   "name": "kattsoftware/phassets",
   "description": "PHP library for assets management (processing, deployment and serving).",
+  "version": "1.0.0",
   "license": "MIT",
   "type": "library",
   "homepage": "https://github.com/kattsoftware/phassets",
   "require": {
     "php": ">=5.3.0",
-    "patchwork/jsqueeze": "~2.0",
-    "tpyo/amazon-s3-php-class": "*"
+    "patchwork/jsqueeze": "~2.0"
   },
   "autoload": {
-    "psr-0": {
-      "Phassets": "src/",
-      "Phassets\\Tests": "tests/"
+    "psr-4": {
+      "Phassets\\": "src/",
+      "Phassets\\Tests\\": "tests/"
     }
   }
 }
