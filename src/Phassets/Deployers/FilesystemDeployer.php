@@ -32,6 +32,11 @@ class FilesystemDeployer implements Deployer
     private $baseUrl;
 
     /**
+     * @var string What should trigger re-deployment of an asset ('filemtime' (default), 'md5', 'sha1')
+     */
+    private $trigger;
+
+    /**
      * Deployer constructor.
      *
      * @param Configurator $configurator Chosen and loaded Phassets configurator.
@@ -110,6 +115,7 @@ class FilesystemDeployer implements Deployer
     {
         $this->destinationPath = $this->configurator->getConfig('filesystem_deployer', 'destination_path');
         $this->baseUrl = $this->configurator->getConfig('filesystem_deployer', 'base_url');
+        $this->trigger = $this->configurator->getConfig('filesystem_deployer', 'changes_trigger');
 
         if ($this->destinationPath === null) {
             return false;
@@ -133,7 +139,19 @@ class FilesystemDeployer implements Deployer
     {
         $ext = $asset->getExtension() ? '.' . $asset->getExtension() : '';
 
-        return $asset->getFilename() . '_' . $asset->getModifiedTimestamp() . $ext;
+        switch ($this->trigger) {
+            case 'md5':
+                $suffix = $asset->getMd5();
+                break;
+            case 'sha1':
+                $suffix = $asset->getSha1();
+                break;
+            case 'filemtime':
+            default:
+                $suffix = $asset->getModifiedTimestamp();
+        }
+
+        return $asset->getFilename() . '_' . $suffix . $ext;
     }
 
     /**
@@ -144,6 +162,6 @@ class FilesystemDeployer implements Deployer
      */
     private function generateCacheKey($computedFileName)
     {
-        return 'ph_fsystem_' . $computedFileName;
+        return 'ph_fs_' . $computedFileName;
     }
 }
