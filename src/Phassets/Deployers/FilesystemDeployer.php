@@ -3,6 +3,7 @@
 namespace Phassets\Deployers;
 
 use Phassets\Asset;
+use Phassets\Exceptions\PhassetsInternalException;
 use Phassets\Interfaces\CacheAdapter;
 use Phassets\Interfaces\Configurator;
 use Phassets\Interfaces\Deployer;
@@ -50,40 +51,47 @@ class FilesystemDeployer implements Deployer
 
     /**
      * Attempt to retrieve a previously deployed asset; if it does exist,
-     * then return an absolute URL to its deployed version without performing
+     * then update the Asset instance's outputUrl property, without performing
      * any further filters' actions.
      *
      * @param Asset $asset
-     * @return string|bool An absolute URL to asset already-processed version or false
-     *                     if the asset was never deployed using this class.
+     * @return bool Whether the Asset was previously deployed or not;
+     *              If yes, then Asset's outputUrl property will be updated.
      */
-    public function getDeployedFile(Asset $asset)
+    public function isPreviouslyDeployed(Asset $asset)
     {
         // Is there any previous deployed version?
         $outputBasename = $this->computeOutputBasename($asset);
+        $cacheKey = $this->generateCacheKey($outputBasename);
 
-        $cachedUrl = $this->cacheAdapter->get($this->generateCacheKey($outputBasename));
+        $cachedUrl = $this->cacheAdapter->get($cacheKey);
 
-        if($cachedUrl !== false) {
-            return $cachedUrl;
+        if ($cachedUrl !== false) {
+            $asset->setOutputUrl($cachedUrl);
+
+            return true;
         }
 
         $file = $this->destinationPath . DIRECTORY_SEPARATOR . $outputBasename;
 
         if (is_file($file)) {
-            return $this->baseUrl . '/' . $outputBasename;
+            $objectUrl = $this->baseUrl . '/' . $outputBasename;
+            $this->cacheAdapter->save($cacheKey, $objectUrl, self::CACHE_TTL);
+
+            $asset->setOutputUrl($objectUrl);
+
+            return true;
         }
 
         return false;
     }
 
     /**
-     * Given an Asset instance, try to deploy the file using internal
-     * rules of this deployer. Returns false in case of failure.
+     * Given an Asset instance, try to deploy is using internal
+     * rules of this deployer and update Asset's property outputUrl.
      *
-     * @param Asset $asset
-     * @return string|bool An absolute URL to asset already-processed version or false
-     *                     if the asset wasn't deployed.
+     * @param Asset $asset Asset instance whose outputUrl property will be modified
+     * @throws PhassetsInternalException If the deployment process fails
      */
     public function deploy(Asset $asset)
     {
@@ -93,23 +101,25 @@ class FilesystemDeployer implements Deployer
         $saving = file_put_contents($fullPath, $asset->getContents());
 
         if($saving === false) {
-            return false;
+            throw new PhassetsInternalException(
+                'file_put_contents() could not write to ' . $fullPath .
+                '. It is writable?'
+            );
         }
 
-        $absoluteUrl = $this->baseUrl . '/' . $outputBasename;
+        $objectUrl = $this->baseUrl . '/' . $outputBasename;
 
-        $this->cacheAdapter->save($this->generateCacheKey($outputBasename), $absoluteUrl, self::CACHE_TTL);
+        $asset->setOutputUrl($objectUrl);
 
-        return $absoluteUrl;
+        $this->cacheAdapter->save($this->generateCacheKey($outputBasename), $objectUrl, self::CACHE_TTL);
     }
 
     /**
-     * This must return true/false if the current configuration allows
-     * this deployer to deploy processed assets AND it can return previously
-     * deployed assets as well.
+     * This must throw a PhassetsInternalException if the current configuration
+     * doesn't allow this deployer to deploy processed assets.
      *
-     * @return bool True if at this time Phassets can use this deployer to
-     *              deploy and serve deployed assets, false otherwise.
+     * @throws PhassetsInternalException If at this time Phassets can't use this deployer to
+     *                                   deploy and serve deployed assets
      */
     public function isSupported()
     {
@@ -118,14 +128,14 @@ class FilesystemDeployer implements Deployer
         $this->trigger = $this->configurator->getConfig('filesystem_deployer', 'changes_trigger');
 
         if ($this->destinationPath === null) {
-            return false;
+            throw new PhassetsInternalException('FilesystemDeployer: no "destination_path" setting found');
         }
 
         if (!is_dir($this->destinationPath) || !is_writable($this->destinationPath)) {
-            return false;
+            throw new PhassetsInternalException("FilesystemDeployer: 'destination_path' ({$this->destinationPath}) is " .
+            'either not a valid dir, nor writable.'
+            );
         }
-
-        return true;
     }
 
     /**

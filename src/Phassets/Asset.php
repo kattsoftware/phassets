@@ -45,6 +45,11 @@ class Asset
     private $sha1;
 
     /**
+     * @var string URL to deployed version of this asset
+     */
+    private $outputUrl;
+
+    /**
      * Asset constructor.
      *
      * @param string $fullPath Full, absolute path to asset/identifier of asset
@@ -54,6 +59,14 @@ class Asset
         $this->fullPath = $fullPath;
         $this->isFile = is_file($fullPath);
         $this->pathinfo = $this->isFile ? pathinfo($fullPath) : [];
+    }
+
+    /**
+     * @return string
+     */
+    public function __toString()
+    {
+        return isset($this->outputUrl) ? $this->outputUrl : $this->getContents();
     }
 
     /**
@@ -146,5 +159,21 @@ class Asset
         }
 
         return false;
+    }
+
+    /**
+     * @return string
+     */
+    public function getOutputUrl()
+    {
+        return $this->outputUrl;
+    }
+
+    /**
+     * @param string $outputUrl
+     */
+    public function setOutputUrl($outputUrl)
+    {
+        $this->outputUrl = $outputUrl;
     }
 }

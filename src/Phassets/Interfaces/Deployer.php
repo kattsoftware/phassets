@@ -3,6 +3,7 @@
 namespace Phassets\Interfaces;
 
 use Phassets\Asset;
+use Phassets\Exceptions\PhassetsInternalException;
 
 interface Deployer
 {
@@ -16,32 +17,30 @@ interface Deployer
 
     /**
      * Attempt to retrieve a previously deployed asset; if it does exist,
-     * then return an absolute URL to its deployed version without performing
+     * then update the Asset instance's outputUrl property, without performing
      * any further filters' actions.
      *
      * @param Asset $asset
-     * @return string|bool An absolute URL to asset already-processed version or false
-     *                     if the asset was never deployed using this class.
+     * @return bool Whether the Asset was previously deployed or not;
+     *              If yes, then Asset's outputUrl property will be updated.
      */
-    public function getDeployedFile(Asset $asset);
+    public function isPreviouslyDeployed(Asset $asset);
 
     /**
-     * Given an Asset instance, try to deploy the file using internal
-     * rules of this deployer. Returns false in case of failure.
+     * Given an Asset instance, try to deploy is using internal
+     * rules of this deployer and update Asset's property outputUrl.
      *
-     * @param Asset $asset
-     * @return string|bool An absolute URL to asset already-processed version or false
-     *                     if the asset wasn't deployed.
+     * @param Asset $asset Asset instance whose outputUrl property will be modified
+     * @throws PhassetsInternalException If the deployment process fails
      */
     public function deploy(Asset $asset);
 
     /**
-     * This must return true/false if the current configuration allows
-     * this deployer to deploy processed assets AND it can return previously
-     * deployed assets as well.
+     * This must throw a PhassetsInternalException if the current configuration
+     * doesn't allow this deployer to deploy processed assets.
      *
-     * @return bool True if at this time Phassets can use this deployer to
-     *              deploy and serve deployed assets, false otherwise.
+     * @throws PhassetsInternalException If at this time Phassets can't use this deployer to
+     *                                   deploy and serve deployed assets
      */
     public function isSupported();
 }

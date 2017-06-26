@@ -3,8 +3,11 @@
 namespace Phassets\Filters;
 
 use Phassets\Asset;
+use Phassets\Exceptions\PhassetsInternalException;
 use Phassets\Interfaces\Configurator;
 use Phassets\Interfaces\Filter;
+use Sabberworm\CSS\Parsing\SourceException;
+use Sabberworm\CSS\Parsing\UnexpectedTokenException;
 use Sabberworm\CSS\Parser;
 use Sabberworm\CSS\OutputFormat;
 
@@ -21,19 +24,31 @@ class CssCompactFilter implements Filter
 
     /**
      * Process the Asset received and using Asset::setContents(), update
-     * the contents accordingly. If succeeded, return true; false otherwise.
+     * the contents accordingly. If it fails, will throw PhassetsInternalException
      *
-     * @param Asset $asset
-     * @return bool Whether the filtering succeeded or not
+     * @param Asset $asset Asset instance which will be updated via setContents()
+     * @throws PhassetsInternalException in case of failure
      */
     public function filter(Asset $asset)
     {
-        $cssParser = new Parser($asset->getContents());
+        try {
+            $cssParser = new Parser($asset->getContents());
 
-        $result = $cssParser->parse()->render(OutputFormat::createCompact());
+            $result = $cssParser->parse()->render(OutputFormat::createCompact());
+        } catch(SourceException $e) {
+            throw new PhassetsInternalException(
+                'CssCompactFilter: SourceException caught',
+                $e->getCode(),
+                $e
+            );
+        } catch(UnexpectedTokenException $e) {
+            throw new PhassetsInternalException(
+                'CssCompactFilter: UnexpectedTokenException caught',
+                $e->getCode(),
+                $e
+            );
+        }
 
         $asset->setContents($result);
-
-        return true;
     }
 }
