@@ -5,6 +5,12 @@ namespace Phassets\Loggers;
 use Phassets\Interfaces\Configurator;
 use Phassets\Interfaces\Logger;
 
+/**
+ * PHP error_log() wrapper as Logger
+ *
+ * This content is released under the MIT License (MIT).
+ * @see LICENSE file
+ */
 class ErrorLogLogger implements Logger
 {
     /**

@@ -11,6 +11,13 @@ use Sabberworm\CSS\Parsing\UnexpectedTokenException;
 use Sabberworm\CSS\Parser;
 use Sabberworm\CSS\OutputFormat;
 
+/**
+ * Sabberworm's CSS PHP parser wrapper for Phassets
+ *
+ * This content is released under the MIT License (MIT).
+ * @see LICENSE file
+ * @see https://github.com/sabberworm/PHP-CSS-Parser For licensing information about CSS PHP parser
+ */
 class CssCompactFilter implements Filter
 {
     /**

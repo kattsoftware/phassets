@@ -7,6 +7,13 @@ use Phassets\Interfaces\Configurator;
 use Phassets\Interfaces\Filter;
 use Patchwork\JSqueeze;
 
+/**
+ * Patchwork's JSqueeze wrapper for Phassets
+ *
+ * This content is released under the MIT License (MIT).
+ * @see LICENSE file
+ * @see https://github.com/tchwork/jsqueeze For licensing information about JSqueeze
+ */
 class JSqueezeFilter implements Filter
 {
     /**

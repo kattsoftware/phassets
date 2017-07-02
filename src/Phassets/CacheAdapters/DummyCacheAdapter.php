@@ -5,6 +5,12 @@ namespace Phassets\CacheAdapters;
 use Phassets\Interfaces\CacheAdapter;
 use Phassets\Interfaces\Configurator;
 
+/**
+ * Dummy cache adapter (fakes the caching process)
+ *
+ * This content is released under the MIT License (MIT).
+ * @see LICENSE file
+ */
 class DummyCacheAdapter implements CacheAdapter
 {
     /**

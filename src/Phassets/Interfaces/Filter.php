@@ -5,6 +5,12 @@ namespace Phassets\Interfaces;
 use Phassets\Asset;
 use Phassets\Exceptions\PhassetsInternalException;
 
+/**
+ * Filter interface for defining filters components
+ *
+ * This content is released under the MIT License (MIT).
+ * @see LICENSE file
+ */
 interface Filter
 {
     /**

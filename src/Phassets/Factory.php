@@ -8,6 +8,12 @@ use Phassets\Interfaces\Deployer;
 use Phassets\Interfaces\Filter;
 use Phassets\Interfaces\Logger;
 
+/**
+ * Phassets Factory
+ *
+ * This content is released under the MIT License (MIT).
+ * @see LICENSE file
+ */
 class Factory
 {
     /**

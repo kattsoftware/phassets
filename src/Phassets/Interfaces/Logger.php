@@ -2,6 +2,12 @@
 
 namespace Phassets\Interfaces;
 
+/**
+ * Logger interface for defining loggers components
+ *
+ * This content is released under the MIT License (MIT).
+ * @see LICENSE file
+ */
 interface Logger
 {
     /**

@@ -8,6 +8,13 @@ use Phassets\Interfaces\CacheAdapter;
 use Phassets\Interfaces\Configurator;
 use Phassets\Interfaces\Deployer;
 
+/**
+ * Local filesystem deployer
+ * @see Phassets GitHub wiki
+ *
+ * This content is released under the MIT License (MIT).
+ * @see LICENSE file
+ */
 class FilesystemDeployer implements Deployer
 {
     const CACHE_TTL = 3600;

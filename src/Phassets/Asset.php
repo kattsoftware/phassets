@@ -2,6 +2,12 @@
 
 namespace Phassets;
 
+/**
+ * Asset definition class
+ *
+ * This content is released under the MIT License (MIT).
+ * @see LICENSE file
+ */
 class Asset
 {
     /**

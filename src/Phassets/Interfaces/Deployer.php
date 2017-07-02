@@ -5,6 +5,12 @@ namespace Phassets\Interfaces;
 use Phassets\Asset;
 use Phassets\Exceptions\PhassetsInternalException;
 
+/**
+ * Deployer interface for defining deployers components
+ *
+ * This content is released under the MIT License (MIT).
+ * @see LICENSE file
+ */
 interface Deployer
 {
     /**

@@ -2,6 +2,12 @@
 
 namespace Phassets\Interfaces;
 
+/**
+ * Configurator interface for defining configurators components
+ *
+ * This content is released under the MIT License (MIT).
+ * @see LICENSE file
+ */
 interface Configurator
 {
     /**

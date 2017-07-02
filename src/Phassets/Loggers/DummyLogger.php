@@ -5,6 +5,12 @@ namespace Phassets\Loggers;
 use Phassets\Interfaces\Configurator;
 use Phassets\Interfaces\Logger;
 
+/**
+ * Dummy logger (fakes the logging process)
+ *
+ * This content is released under the MIT License (MIT).
+ * @see LICENSE file
+ */
 class DummyLogger implements Logger
 {
     /**

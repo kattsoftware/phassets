@@ -11,6 +11,12 @@ use Phassets\Interfaces\Filter;
 use Phassets\Interfaces\Logger;
 use Phassets\Loggers\DummyLogger;
 
+/**
+ * Phassets library
+ *
+ * This content is released under the MIT License (MIT).
+ * @see LICENSE file
+ */
 class Phassets
 {
     /**

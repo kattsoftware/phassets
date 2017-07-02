@@ -2,6 +2,12 @@
 
 namespace Phassets\Interfaces;
 
+/**
+ * CacheAdapter interface for defining cache adapters components
+ *
+ * This content is released under the MIT License (MIT).
+ * @see LICENSE file
+ */
 interface CacheAdapter
 {
     /**
