@@ -2,6 +2,8 @@
 
 namespace Phassets;
 
+use Phassets\Interfaces\FileHandler;
+use Phassets\Interfaces\AssetsMerger;
 use Phassets\Interfaces\CacheAdapter;
 use Phassets\Interfaces\Configurator;
 use Phassets\Interfaces\Deployer;
@@ -80,9 +82,9 @@ class Factory
     }
 
     /**
-     * Creates a new Asset instance, by using an absolute file path.
+     * Creates a new Asset instance.
      *
-     * @param string $file
+     * @param string $file Full path of the asset
      * @return Asset
      */
     public function buildAsset($file)
@@ -127,6 +129,47 @@ class Factory
         }
 
         if (class_exists($class) && is_subclass_of($class, Filter::class)) {
+            return new $class($configurator);
+        }
+
+        return false;
+    }
+
+    /**
+     * Creates an AssetContentsHandler instance.
+     *
+     * @param string $class Fully qualified class name of a AssetContentsHandler class
+     *
+     * @return bool|FileHandler Created instance of the provided AssetContentsHandler; false on failure
+     */
+    public function buildAssetContentsHandler($class)
+    {
+        if (!class_exists($class) || !is_subclass_of($class, FileHandler::class)) {
+            $class = "\\Phassets\\AssetContentsHandlers\\$class";
+        }
+
+        if (class_exists($class) && is_subclass_of($class, FileHandler::class)) {
+            return new $class();
+        }
+
+        return false;
+    }
+
+    /**
+     * Creates an AssetsMerger instance.
+     *
+     * @param string $class Fully qualified class name of a AssetsMerger class
+     * @param Configurator $configurator Currently used Configurator of Phassets
+     *
+     * @return bool|AssetsMerger Created instance of the provided AssetsMerger; false on failure
+     */
+    public function buildAssetsMerger($class, Configurator $configurator)
+    {
+        if (!class_exists($class) || !is_subclass_of($class, AssetsMerger::class)) {
+            $class = "\\Phassets\\AssetsMergers\\$class";
+        }
+
+        if (class_exists($class) && is_subclass_of($class, AssetsMerger::class)) {
             return new $class($configurator);
         }
 

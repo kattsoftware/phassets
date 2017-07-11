@@ -2,8 +2,11 @@
 
 namespace Phassets;
 
+use Phassets\AssetsMergers\NewLineAssetsMerger;
 use Phassets\CacheAdapters\DummyCacheAdapter;
 use Phassets\Exceptions\PhassetsInternalException;
+use Phassets\Interfaces\FileHandler;
+use Phassets\Interfaces\AssetsMerger;
 use Phassets\Interfaces\CacheAdapter;
 use Phassets\Interfaces\Configurator;
 use Phassets\Interfaces\Deployer;
@@ -23,6 +26,11 @@ class Phassets
      * @var Factory
      */
     private $objectsFactory;
+
+    /**
+     * @var FilesCollector Service for gathering bulk list of files
+     */
+    private $fileCollector;
 
     /**
      * @var Configurator
@@ -57,12 +65,24 @@ class Phassets
     /**
      * @var Deployer[] Associative array of deployers class names and their instances.
      */
-    private $deployersInstances = [];
+    private $deployersInstances = array();
 
     /**
-     * @var Filter[] Associative array of class names and their instances.
+     * @var Filter[] Associative array of filters class names and their instances.
      */
-    private $filtersInstances = [];
+    private $filtersInstances = array();
+
+    /**
+     * @var AssetsMerger[] Associative array of AssetsMergers class names and their instances
+     */
+    private $assetsMergerInstances = array();
+
+    /**
+     * @var array List of default assets mergers fully qualified class names
+     */
+    private $assetsMergersList = array(
+        '*' => NewLineAssetsMerger::class,
+    );
 
     /**
      * AssetsManager constructor.
@@ -84,35 +104,27 @@ class Phassets
     }
 
     /**
-     * Given a full-path of a file/arbitrary string, creates an instance
-     * of Asset.
-     *
-     * @param string $file
-     * @return Asset Generated instance for $file
-     */
-    public function createAsset($file)
-    {
-        foreach ($this->assetsSource as $source) {
-            if (is_file($source . DIRECTORY_SEPARATOR . $file)) {
-                return $this->objectsFactory->buildAsset($source . DIRECTORY_SEPARATOR . $file);
-            }
-        }
-
-        return $this->objectsFactory->buildAsset($file);
-    }
-
-    /**
-     * Processes and deploys an Asset instance and returns the same instance
+     * Processes and deploys an asset and returns an Asset instance
      * with modified properties, according to used filters and deployers.
      *
-     * @param Asset $asset Asset to be processed & deployed
+     * @param string $file file name to be searched through "assets_source"
      * @param null|array $customFilters Overrides "filter" setting
      * @param null|string $customDeployer Overrides the loaded deployer
      *
-     * @return Asset Modified instance of the received Asset
+     * @return Asset The created Asset instance
      */
-    public function work(Asset $asset, $customFilters = null, $customDeployer = null)
+    public function work($file, $customFilters = null, $customDeployer = null)
     {
+        foreach ($this->assetsSource as $source) {
+            if (is_file($source . DIRECTORY_SEPARATOR . $file)) {
+                $asset = $this->objectsFactory->buildAsset($source . DIRECTORY_SEPARATOR . $file);
+            }
+        }
+
+        if (!isset($asset)) {
+            $asset = $this->objectsFactory->buildAsset($file);
+        }
+
         // See if file is already deployed.
         if ($customDeployer !== null) {
             if ($this->loadDeployer($customDeployer)) {
@@ -136,15 +148,7 @@ class Phassets
         }
 
         if (is_array($filters)) {
-            foreach ($filters as $filter) {
-                if ($this->loadFilter($filter)) {
-                    try {
-                        $this->filtersInstances[$filter]->filter($asset);
-                    } catch (PhassetsInternalException $e) {
-                        $this->loadedLogger->error('An error occurred while filtering the asset: ' . $e);
-                    }
-                }
-            }
+            $this->filterAsset($filters, $asset);
         }
 
         // All set! Let's deploy now.
@@ -159,6 +163,26 @@ class Phassets
         }
 
         return $asset;
+    }
+
+    /**
+     * Applies a list of filters (fully qualified class names) to an
+     * Asset instance.
+     *
+     * @param array $filters Array of the fully qualified filters class names
+     * @param Asset $asset Instance to be modified
+     */
+    private function filterAsset(array $filters, Asset $asset)
+    {
+        foreach ($filters as $filter) {
+            if ($this->loadFilter($filter)) {
+                try {
+                    $this->filtersInstances[$filter]->filter($asset);
+                } catch (PhassetsInternalException $e) {
+                    $this->loadedLogger->error('An error occurred while filtering the asset: ' . $e);
+                }
+            }
+        }
     }
 
     /**
@@ -258,6 +282,15 @@ class Phassets
         return true;
     }
 
+//    public function loadAssetsManager($class)
+//    {
+//        if(isset($this->assetsMergerInstances[$class])) {
+//            return true;
+//        }
+//
+//
+//    }
+
     /**
      * After the Configurator was loaded, try to complete the load of other settings.
      */
@@ -344,6 +377,15 @@ class Phassets
             }
         } else {
             $this->loadedLogger->warning('"deployers" setting is not an array; no deployers loaded...');
+        }
+
+        // Mergers
+        $assetsMergers = $this->loadedConfigurator->getConfig('mergers');
+
+        if (is_array($assetsMergers)) {
+            foreach ($assetsMergers as $ext => $assetsMerger) {
+
+            }
         }
     }
 }

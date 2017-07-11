@@ -2,10 +2,13 @@
 
 namespace Phassets;
 
+use Phassets\Interfaces\FileHandler;
+
 /**
  * Asset definition class
  *
  * This content is released under the MIT License (MIT).
+ *
  * @see LICENSE file
  */
 class Asset
@@ -21,12 +24,22 @@ class Asset
     private $isFile;
 
     /**
-     * @var array pathinfo() call result on "fullPath"
+     * @var string The asset dirname (from pathinfo())
      */
-    private $pathinfo;
+    private $dirname;
 
     /**
-     * @var string Initial or modified contents of the file
+     * @var string The asset filename (from pathinfo())
+     */
+    private $filename;
+
+    /**
+     * @var string The asset extension (from pathinfo())
+     */
+    private $extension;
+
+    /**
+     * @var string The contents of a plain/text asset
      */
     private $contents;
 
@@ -43,7 +56,7 @@ class Asset
     /**
      * @var string MD5 hash from md5_file()
      */
-    private $md5Checksum;
+    private $md5;
 
     /**
      * @var string The SHA1 checksum of asset
@@ -51,9 +64,19 @@ class Asset
     private $sha1;
 
     /**
+     * @var string The changed extension of the asset (initial value is $this->extension)
+     */
+    private $outputExtension;
+
+    /**
      * @var string URL to deployed version of this asset
      */
     private $outputUrl;
+
+    /**
+     * @var FileHandler
+     */
+    private $fileHandler;
 
     /**
      * Asset constructor.
@@ -63,8 +86,6 @@ class Asset
     public function __construct($fullPath)
     {
         $this->fullPath = $fullPath;
-        $this->isFile = is_file($fullPath);
-        $this->pathinfo = $this->isFile ? pathinfo($fullPath) : [];
     }
 
     /**
@@ -72,7 +93,7 @@ class Asset
      */
     public function __toString()
     {
-        return isset($this->outputUrl) ? $this->outputUrl : $this->getContents();
+        return $this->outputUrl;
     }
 
     /**
@@ -84,38 +105,64 @@ class Asset
     }
 
     /**
-     * @return bool|mixed
+     * @return boolean Whether original file is a real file or not
      */
-    public function getFilename()
+    public function isFile()
     {
-        return isset($this->pathinfo['filename']) ? $this->pathinfo['filename'] : false;
-    }
-
-    /**
-     * @return bool|mixed
-     */
-    public function getExtension()
-    {
-        return isset($this->pathinfo['extension']) ? $this->pathinfo['extension'] : false;
+        return is_bool($this->isFile) ? $this->isFile : $this->isFile = is_file($this->fullPath);
     }
 
     /**
      * @return string
      */
+    public function getDirname()
+    {
+        return is_string($this->dirname) ? $this->dirname : $this->dirname = pathinfo($this->fullPath, PATHINFO_DIRNAME);
+    }
+
+    /**
+     * @return string
+     */
+    public function getFilename()
+    {
+        return is_string($this->filename) ? $this->filename : $this->filename = pathinfo($this->fullPath, PATHINFO_FILENAME);
+    }
+
+    /**
+     * @return string
+     */
+    public function getExtension()
+    {
+        return is_string($this->extension) ? $this->extension : $this->extension = pathinfo($this->fullPath, PATHINFO_EXTENSION);
+    }
+
+    /**
+     * @return mixed
+     */
     public function getContents()
     {
-        if ($this->isFile) {
-            return $this->contents ?: $this->contents = file_get_contents($this->fullPath);
+        if ($this->fileHandler instanceof FileHandler) {
+            return $this->fileHandler->getContents();
+        }
+
+        if ($this->isFile()) {
+            return is_string($this->contents) ? $this->contents : $this->contents = file_get_contents($this->fullPath);
         }
 
         return '';
     }
 
     /**
-     * @param string $contents
+     * @param mixed $contents
      */
     public function setContents($contents)
     {
+        if ($this->fileHandler instanceof FileHandler) {
+            $this->fileHandler->setContents($contents);
+
+            return;
+        }
+
         $this->contents = $contents;
     }
 
@@ -124,11 +171,11 @@ class Asset
      */
     public function getSize()
     {
-        if ($this->isFile) {
-            return $this->size ?: $this->size = filesize($this->fullPath);
+        if ($this->isFile()) {
+            return is_int($this->size) ? $this->size : $this->size = filesize($this->fullPath);
         }
 
-        return false;
+        return 0;
     }
 
     /**
@@ -136,7 +183,7 @@ class Asset
      */
     public function getModifiedTimestamp()
     {
-        if ($this->isFile) {
+        if ($this->isFile()) {
             return $this->fileModifiedTimestamp ?: $this->fileModifiedTimestamp = filemtime($this->fullPath);
         }
 
@@ -144,27 +191,51 @@ class Asset
     }
 
     /**
-     * @return bool|string
+     * @return bool|string The MD5 string computed for the original file
      */
     public function getMd5()
     {
-        if ($this->isFile) {
-            return $this->md5Checksum ?: $this->md5Checksum = md5_file($this->fullPath);
+        if ($this->isFile()) {
+            return $this->md5 ?: $this->md5 = md5_file($this->fullPath);
         }
 
         return false;
     }
 
     /**
-     * @return bool|string
+     * @return bool|string The SHA1 string computed for the original file
      */
     public function getSha1()
     {
-        if ($this->isFile) {
+        if ($this->isFile()) {
             return $this->sha1 ?: $this->sha1 = sha1_file($this->fullPath);
         }
 
         return false;
+    }
+
+    /**
+     * @param string $filename
+     */
+    public function setFilename($filename)
+    {
+        $this->filename = $filename;
+    }
+
+    /**
+     * @return string
+     */
+    public function getOutputExtension()
+    {
+        return $this->outputExtension ?: $this->outputExtension = $this->getExtension();
+    }
+
+    /**
+     * @param string $outputExtension
+     */
+    public function setOutputExtension($outputExtension)
+    {
+        $this->outputExtension = $outputExtension;
     }
 
     /**
@@ -181,5 +252,21 @@ class Asset
     public function setOutputUrl($outputUrl)
     {
         $this->outputUrl = $outputUrl;
+    }
+
+    /**
+     * @param FileHandler $fileHandler
+     */
+    public function registerFileHandler(FileHandler $fileHandler)
+    {
+        $this->fileHandler = $fileHandler;
+    }
+
+    /**
+     * @return FileHandler
+     */
+    public function getFileHandler()
+    {
+        return $this->fileHandler;
     }
 }
