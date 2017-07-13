@@ -94,6 +94,7 @@ class Phassets
     public function __construct($configurator, $logger = null, $cacheAdapter = null)
     {
         $this->objectsFactory = new Factory();
+        $this->fileCollector = new FilesCollector();
 
         $this->setConfigurator($configurator);
 
@@ -101,6 +102,50 @@ class Phassets
         $this->setCacheAdapter($cacheAdapter);
 
         $this->readConfig();
+    }
+
+    /**
+     * Same as work(), except it operates on an array of folder of assets sources.
+     *
+     * @param array $folders Which folders to look in (absolute paths);
+     *                       if not provided, "assets_source" will be used instead
+     * @param array $extensions Which files should be processed; if not provided,
+     *                          all extensions having a filter assigned will be used
+     * @param bool $deep Whether to search in sub-dirs or not
+     * @param array $exclusions Array of filenames to be removed from processing
+     * @return Asset[] array of Asset instances for each file found and processed
+     */
+    public function workAll(array $folders = array(), array $extensions = array(), $deep = false, $exclusions = array())
+    {
+        if ($folders === array()) {
+            $folders = $this->assetsSource;
+        }
+
+        if ($extensions === array()) {
+            $extensions = array_keys($this->filters);
+        }
+
+        $assets = [];
+
+        foreach ($extensions as $extension) {
+            $files = array();
+
+            foreach ($folders as $folder) {
+                try {
+                    $files = array_merge($files, $this->fileCollector->parse($folder, array($extension), $deep));
+                } catch (PhassetsInternalException $e) {
+                    $this->loadedLogger->error('FileCollector: ' . $e);
+                }
+            }
+
+            $files = array_diff($files, $exclusions);
+
+            foreach ($files as $file) {
+                $assets[] = $this->work($file);
+            }
+        }
+
+        return $assets;
     }
 
     /**
@@ -282,14 +327,36 @@ class Phassets
         return true;
     }
 
-//    public function loadAssetsManager($class)
-//    {
-//        if(isset($this->assetsMergerInstances[$class])) {
-//            return true;
-//        }
-//
-//
-//    }
+    /**
+     * Try to create & load an instance of a given AssetsMerger class name.
+     *
+     * @param string $class Fully qualified class name
+     * @return bool Whether the loading succeeded or not
+     */
+    private function loadAssetsManager($class)
+    {
+        if (isset($this->assetsMergerInstances[$class])) {
+            return true;
+        }
+
+        $merger = $this->objectsFactory->buildAssetsMerger($class, $this->loadedConfigurator);
+
+        if ($merger === false) {
+            $this->loadedLogger->warning('Could not load ' . $class . ' merger.');
+
+            return false;
+        }
+
+        $this->assetsMergerInstances[$class] = $merger;
+        $this->loadedLogger->debug('Assets merger ' . $class . ' found & loaded.');
+
+        return true;
+    }
+
+    private function computeMergingAssetsCacheKey()
+    {
+
+    }
 
     /**
      * After the Configurator was loaded, try to complete the load of other settings.
@@ -384,7 +451,9 @@ class Phassets
 
         if (is_array($assetsMergers)) {
             foreach ($assetsMergers as $ext => $assetsMerger) {
-
+                if ($this->loadAssetsManager($assetsMerger)) {
+                    $this->assetsMergersList[$ext] = $assetsMerger;
+                }
             }
         }
     }

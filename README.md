@@ -1,12 +1,10 @@
-# Welcome to Phassets
-
 ## Introduction
 
-Phassets is a PHP library for managing Web assets. 
+Phassets is a PHP library for managing Web assets, making it easy, simple and effective. 
 
-If you are searching to minify JS or CSS files and deploy them to the local filesystem or Amazon S3 (and many more soon!), then this library may be what you are looking for!
+Minifying the JS/CSS? Compiling the SCSS to CSS? Deploying these to local filesystem or a cloud provider, such as Amazon S3? Just some things that this library is doing.
 
-The base component, `kattsoftware/phassets`, can be installed via [composer](https://getcomposer.org/):
+The base (and required) component, `kattsoftware/phassets`, can be installed via [composer](https://getcomposer.org/):
 
 ```
 composer require kattsoftware/phassets:0.2.0-beta
