@@ -28,4 +28,6 @@ interface Filter
      * @throws PhassetsInternalException in case of failure
      */
     public function filter(Asset $asset);
+
+//    public function getExtension() /** @return string */
 }

@@ -17,14 +17,14 @@ interface Deployer
      * Deployer constructor.
      *
      * @param Configurator $configurator Chosen and loaded Phassets configurator.
-     * @param CacheAdapter $cacheAdapter Chosen and loaded Phassets cache adapter (if any)
      */
-    public function __construct(Configurator $configurator, CacheAdapter $cacheAdapter);
+    public function __construct(Configurator $configurator);
 
     /**
      * Attempt to retrieve a previously deployed asset; if it does exist,
      * then update the Asset instance's outputUrl property, without performing
      * any further filters' actions.
+     * fullPath and outputExtension are set at this point in the Asset instance.
      *
      * @param Asset $asset
      * @return bool Whether the Asset was previously deployed or not;

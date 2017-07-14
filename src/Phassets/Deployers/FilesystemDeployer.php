@@ -60,6 +60,8 @@ class FilesystemDeployer implements Deployer
      * Attempt to retrieve a previously deployed asset; if it does exist,
      * then update the Asset instance's outputUrl property, without performing
      * any further filters' actions.
+     * Note: only fullPath property of Asset instance is set, without any
+     * pre-filtering.
      *
      * @param Asset $asset
      * @return bool Whether the Asset was previously deployed or not;
@@ -68,8 +70,7 @@ class FilesystemDeployer implements Deployer
     public function isPreviouslyDeployed(Asset $asset)
     {
         // Is there any previous deployed version?
-        $outputBasename = $this->computeOutputBasename($asset);
-        $cacheKey = $this->generateCacheKey($outputBasename);
+        $cacheKey = $this->generateCacheKey($asset);
 
         $cachedUrl = $this->cacheAdapter->get($cacheKey);
 
@@ -147,14 +148,14 @@ class FilesystemDeployer implements Deployer
 
     /**
      * Generates the output full file name of an Asset instance.
-     * Pattern: <original_file_name>_<last_modified_timestamp>[.<extension>]
+     * Pattern: <original_file_name>_<triggering_asset_value>[.<outputExtension>]
      *
      * @param Asset $asset
      * @return string Generated basename of asset
      */
     private function computeOutputBasename(Asset $asset)
     {
-        $ext = $asset->getExtension() ? '.' . $asset->getExtension() : '';
+        $ext = $asset->getOutputExtension() ? '.' . $asset->getOutputExtension() : '';
 
         switch ($this->trigger) {
             case 'md5':
@@ -174,11 +175,11 @@ class FilesystemDeployer implements Deployer
     /**
      * CacheAdapter specific cache key.
      *
-     * @param string $computedFileName
+     * @param Asset $asset Instance for making the check.
      * @return string
      */
-    private function generateCacheKey($computedFileName)
+    private function generateCacheKey(Asset $asset)
     {
-        return 'ph_fs_' . $computedFileName;
+        return 'ph_fs_' . strtolower($asset->getFullPath());
     }
 }
