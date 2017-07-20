@@ -16,7 +16,7 @@ use Sabberworm\CSS\OutputFormat;
  *
  * This content is released under the MIT License (MIT).
  * @see LICENSE file
- * @see https://github.com/sabberworm/PHP-CSS-Parser For licensing information about CSS PHP parser
+ * @see https://github.com/sabberworm/PHP-CSS-Parser For licensing information about PHP CSS parser
  */
 class CssCompactFilter implements Filter
 {
@@ -38,24 +38,40 @@ class CssCompactFilter implements Filter
      */
     public function filter(Asset $asset)
     {
+        if ($asset->getOutputExtension() !== 'css') {
+            throw new PhassetsInternalException('Only .css files can be filtered by ' . __CLASS__);
+        }
+
         try {
             $cssParser = new Parser($asset->getContents());
 
             $result = $cssParser->parse()->render(OutputFormat::createCompact());
-        } catch(SourceException $e) {
+        } catch (UnexpectedTokenException $e) {
             throw new PhassetsInternalException(
-                'CssCompactFilter: SourceException caught',
+                __CLASS__ . ': UnexpectedTokenException caught',
                 $e->getCode(),
                 $e
             );
-        } catch(UnexpectedTokenException $e) {
+        } catch (SourceException $e) {
             throw new PhassetsInternalException(
-                'CssCompactFilter: UnexpectedTokenException caught',
+                __CLASS__ . ': SourceException caught',
                 $e->getCode(),
                 $e
             );
         }
 
         $asset->setContents($result);
+    }
+
+    /**
+     * Sets the Asset's outputExtension property (Asset::setOutputExtension()).
+     * E.g. if you are minifying JS code, then you should set 'js'.
+     * If you are compiling SCSS to CSS, then you should set 'css'.
+     *
+     * @param Asset $asset The instance of asset, having only the fullPath property set
+     */
+    public function setOutputExtension(Asset $asset)
+    {
+        $asset->setOutputExtension('css');
     }
 }

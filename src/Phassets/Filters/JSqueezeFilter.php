@@ -3,6 +3,7 @@
 namespace Phassets\Filters;
 
 use Phassets\Asset;
+use Phassets\Exceptions\PhassetsInternalException;
 use Phassets\Interfaces\Configurator;
 use Phassets\Interfaces\Filter;
 use Patchwork\JSqueeze;
@@ -23,7 +24,6 @@ class JSqueezeFilter implements Filter
      */
     public function __construct(Configurator $configurator)
     {
-        $this->jsqueeze = new JSqueeze();
     }
 
     /**
@@ -35,6 +35,22 @@ class JSqueezeFilter implements Filter
      */
     public function filter(Asset $asset)
     {
-        $asset->setContents($this->jsqueeze->squeeze($asset->getContents()));
+        if ($asset->getOutputExtension() !== 'js') {
+            throw new PhassetsInternalException('Only .js files can be filtered by ' . __CLASS__);
+        }
+
+        $asset->setContents((new JSqueeze())->squeeze($asset->getContents()));
+    }
+
+    /**
+     * Sets the Asset's outputExtension property (Asset::setOutputExtension()).
+     * E.g. if you are minifying JS code, then you should set 'js'.
+     * If you are compiling SCSS to CSS, then you should set 'css'.
+     *
+     * @param Asset $asset The instance of asset, having only the fullPath property set
+     */
+    public function setOutputExtension(Asset $asset)
+    {
+        $asset->setOutputExtension('js');
     }
 }

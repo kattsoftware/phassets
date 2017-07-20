@@ -5,7 +5,6 @@ namespace Phassets;
 use Phassets\AssetsMergers\NewLineAssetsMerger;
 use Phassets\CacheAdapters\DummyCacheAdapter;
 use Phassets\Exceptions\PhassetsInternalException;
-use Phassets\Interfaces\FileHandler;
 use Phassets\Interfaces\AssetsMerger;
 use Phassets\Interfaces\CacheAdapter;
 use Phassets\Interfaces\Configurator;
@@ -41,6 +40,11 @@ class Phassets
      * @var CacheAdapter
      */
     private $loadedCacheAdapter;
+
+    /**
+     * @var int Caching time-to-live (seconds, default 3600)
+     */
+    private $cacheTtl;
 
     /**
      * @var Logger
@@ -115,7 +119,7 @@ class Phassets
      * @param array $exclusions Array of filenames to be removed from processing
      * @return Asset[] array of Asset instances for each file found and processed
      */
-    public function workAll(array $folders = array(), array $extensions = array(), $deep = false, $exclusions = array())
+    public function workAll(array $folders = array(), array $extensions = array(), $deep = false, array $exclusions = array())
     {
         if ($folders === array()) {
             $folders = $this->assetsSource;
@@ -132,13 +136,11 @@ class Phassets
 
             foreach ($folders as $folder) {
                 try {
-                    $files = array_merge($files, $this->fileCollector->parse($folder, array($extension), $deep));
+                    $files = array_merge($files, $this->fileCollector->parse($folder, array($extension), $deep, $exclusions));
                 } catch (PhassetsInternalException $e) {
                     $this->loadedLogger->error('FileCollector: ' . $e);
                 }
             }
-
-            $files = array_diff($files, $exclusions);
 
             foreach ($files as $file) {
                 $assets[] = $this->work($file);
@@ -160,6 +162,7 @@ class Phassets
      */
     public function work($file, $customFilters = null, $customDeployer = null)
     {
+        // Create the Asset instance
         foreach ($this->assetsSource as $source) {
             if (is_file($source . DIRECTORY_SEPARATOR . $file)) {
                 $asset = $this->objectsFactory->buildAsset($source . DIRECTORY_SEPARATOR . $file);
@@ -170,44 +173,74 @@ class Phassets
             $asset = $this->objectsFactory->buildAsset($file);
         }
 
-        // See if file is already deployed.
-        if ($customDeployer !== null) {
-            if ($this->loadDeployer($customDeployer)) {
-                if ($this->deployersInstances[$customDeployer]->isPreviouslyDeployed($asset)) {
-                    return $asset;
-                }
-            }
-        } elseif ($this->loadDeployer($this->loadedDeployer)) {
-            if ($this->deployersInstances[$this->loadedDeployer]->isPreviouslyDeployed($asset)) {
-                return $asset;
-            }
-        }
-
-        // No previous deployed version found, let's create it now!
-        // First step: pass the asset through all filters.
+        // Assemble the $filters array of fully qualified filters class names
         if (is_array($customFilters)) {
             $filters = $customFilters;
         } else {
             $ext = $asset->getExtension();
-            $filters = isset($this->filters[$ext]) ? $this->filters[$ext] : null;
+            $filters = isset($this->filters[$ext]) ? $this->filters[$ext] : array();
         }
 
-        if (is_array($filters)) {
-            $this->filterAsset($filters, $asset);
+        // Decide which deployer will be used.
+        if (is_string($customDeployer)) {
+            $deployer = $customDeployer;
+        } else {
+            $deployer = $this->loadedDeployer;
         }
+
+        // Is previously cached?
+        $cacheKey = $this->computeCacheKey($asset->getFullPath(), $filters, $deployer);
+        $cacheValue = $this->loadedCacheAdapter->get($cacheKey);
+
+        if ($cacheValue !== false) {
+            $asset->setOutputUrl($cacheValue);
+
+            return $asset;
+        }
+
+        // If there is any different extension, then set it first
+        $this->applyFilterOutputExtension($filters, $asset);
+
+        // Is previously deployed?
+        if (isset($this->deployersInstances[$deployer]) && $this->deployersInstances[$deployer]->isPreviouslyDeployed($asset)) {
+            // Cache the result
+            $cacheValue = $asset->getOutputUrl();
+            $this->loadedCacheAdapter->save($cacheKey, $cacheValue, $this->cacheTtl);
+
+            return $asset;
+        }
+
+        // Pass the asset through all filters.
+        $this->filterAsset($filters, $asset);
 
         // All set! Let's deploy now.
-        try {
-            if ($customDeployer !== null && $this->loadDeployer($customDeployer)) {
-                $this->deployersInstances[$customDeployer]->deploy($asset);
-            } elseif ($this->loadDeployer($this->loadedDeployer)) {
-                $this->deployersInstances[$this->loadedDeployer]->deploy($asset);
-            }
-        } catch (PhassetsInternalException $e) {
-            $this->loadedLogger->error('An error occurred while deploying the asset: ' . $e);
-        }
+        $this->deployAsset($deployer, $asset);
+
+        // Cache the result
+        $cacheValue = $asset->getOutputUrl();
+        $this->loadedCacheAdapter->save($cacheKey, $cacheValue, $this->cacheTtl);
 
         return $asset;
+    }
+
+    /**
+     * Applies the setOutputExtension() from a list of filters (fully qualified class names)
+     * to an Asset instance.
+     *
+     * @param array $filters Array of the fully qualified filters class names
+     * @param Asset $asset Instance to be modified
+     */
+    private function applyFilterOutputExtension(array $filters, Asset $asset)
+    {
+        foreach ($filters as $filter) {
+            if ($this->loadFilter($filter)) {
+                try {
+                    $this->filtersInstances[$filter]->setOutputExtension($asset);
+                } catch (PhassetsInternalException $e) {
+                    $this->loadedLogger->error('An error occurred while filtering the asset: ' . $e);
+                }
+            }
+        }
     }
 
     /**
@@ -219,15 +252,49 @@ class Phassets
      */
     private function filterAsset(array $filters, Asset $asset)
     {
+        $asset->setOutputExtension(null);
+
         foreach ($filters as $filter) {
             if ($this->loadFilter($filter)) {
                 try {
                     $this->filtersInstances[$filter]->filter($asset);
+                    $this->filtersInstances[$filter]->setOutputExtension($asset);
                 } catch (PhassetsInternalException $e) {
                     $this->loadedLogger->error('An error occurred while filtering the asset: ' . $e);
                 }
             }
         }
+    }
+
+    /**
+     * Tries to load a deployer and passes the Asset instance through it.
+     *
+     * @param string $deploy Deployer to load/use
+     * @param Asset $asset
+     */
+    private function deployAsset($deploy, Asset $asset)
+    {
+        if ($this->loadDeployer($deploy)) {
+            try {
+                $this->deployersInstances[$deploy]->deploy($asset);
+            } catch (PhassetsInternalException $e) {
+                $this->loadedLogger->error('An error occurred while deploying the asset: ' . $e);
+            }
+        }
+    }
+
+    /**
+     * Cache key generator method.
+     *
+     * @param string $fullPath Asset full path
+     * @param array $filters Filters fully qualified class names
+     * @param string $deployer Deployer fully qualified class name
+     *
+     * @return string
+     */
+    private function computeCacheKey($fullPath, $filters, $deployer)
+    {
+        return md5($fullPath . implode($filters) . $deployer);
     }
 
     /**
@@ -353,16 +420,12 @@ class Phassets
         return true;
     }
 
-    private function computeMergingAssetsCacheKey()
-    {
-
-    }
-
     /**
      * After the Configurator was loaded, try to complete the load of other settings.
      */
     private function readConfig()
     {
+        // Logging
         if ($this->loadedLogger === null) {
             $logger = $this->loadedConfigurator->getConfig('logger', 'adapter');
 
@@ -373,6 +436,7 @@ class Phassets
             }
         }
 
+        // Caching
         if ($this->loadedCacheAdapter === null) {
             $cacheAdapter = $this->loadedConfigurator->getConfig('cache', 'adapter');
 
@@ -382,6 +446,10 @@ class Phassets
                 $this->setCacheAdapter(DummyCacheAdapter::class);
             }
         }
+
+        $cacheTtl = $this->loadedConfigurator->getConfig('cache', 'ttl');
+
+        $this->cacheTtl = is_numeric($cacheTtl) ? $cacheTtl : 3600;
 
         // Configuration loading
         // Look-up for assets_source

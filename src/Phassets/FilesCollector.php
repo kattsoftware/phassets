@@ -20,11 +20,11 @@ class FilesCollector
      * @param string $dirPath Full path of a folder to be opened by a DirectoryIterator
      * @param array $extensions List of extensions for checking the files found against
      * @param bool $deep Whether to search in sub-folders or not
-     *
+     * @param array $exclusions Array of filenames to be removed from processing
      * @return array List of the found files full paths
      * @throws PhassetsInternalException If the DirectoryIterator may fail
      */
-    public function parse($dirPath, array $extensions, $deep = false)
+    public function parse($dirPath, array $extensions, $deep = false, array $exclusions = array())
     {
         $files = [];
 
@@ -39,7 +39,9 @@ class FilesCollector
                     $files = array_merge($files, $this->parse($entry->getPathname(), $extensions, $deep));
                 }
 
-                if ($entry->isFile() && in_array($entry->getExtension(), $extensions, true)) {
+                if ($entry->isFile() && in_array($entry->getExtension(), $extensions, true)
+                    && !in_array($entry->getFilename(), $exclusions)
+                ) {
                     $files[] = $entry->getPathname();
                 }
             }

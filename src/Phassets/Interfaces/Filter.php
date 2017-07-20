@@ -29,5 +29,12 @@ interface Filter
      */
     public function filter(Asset $asset);
 
-//    public function getExtension() /** @return string */
+    /**
+     * Sets the Asset's outputExtension property (Asset::setOutputExtension()).
+     * E.g. if you are minifying JS code, then you should set 'js'.
+     * If you are compiling SCSS to CSS, then you should set 'css'.
+     *
+     * @param Asset $asset The instance of asset, having only the fullPath property set
+     */
+    public function setOutputExtension(Asset $asset);
 }
